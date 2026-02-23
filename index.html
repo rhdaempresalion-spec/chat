@@ -1,0 +1,216 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Painel de Integração DHR → CRM → WhatsApp</title>
+  <style>
+    :root {
+      --bg: #0b1020;
+      --panel: #121a31;
+      --panel-2: #1a2442;
+      --text: #ecf0ff;
+      --muted: #a7b0d1;
+      --primary: #6ea8fe;
+      --ok: #22c55e;
+      --warn: #f59e0b;
+      --danger: #ef4444;
+      --line: #2d3b67;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: Inter, Segoe UI, Roboto, Arial, sans-serif;
+      background: linear-gradient(180deg, #0b1020 0%, #0f1630 100%);
+      color: var(--text);
+    }
+    .wrap { max-width: 1100px; margin: 0 auto; padding: 28px 16px 56px; }
+    h1 { margin: 0 0 8px; font-size: 1.6rem; }
+    p.sub { margin-top: 0; color: var(--muted); }
+    .grid { display: grid; gap: 14px; }
+    .g2 { grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); }
+    .card {
+      border: 1px solid var(--line);
+      background: rgba(18, 26, 49, 0.85);
+      border-radius: 12px;
+      padding: 14px;
+      box-shadow: 0 8px 20px rgba(0,0,0,.2);
+    }
+    .card h2 { margin: 0 0 10px; font-size: 1.05rem; }
+    label { display: block; margin: 8px 0 4px; color: var(--muted); font-size: .9rem; }
+    input, select, textarea {
+      width: 100%; border: 1px solid var(--line); border-radius: 8px;
+      background: var(--panel-2); color: var(--text); padding: 10px;
+    }
+    textarea { min-height: 100px; resize: vertical; }
+    .row { display: grid; gap: 10px; grid-template-columns: 1fr 1fr; }
+    .pill { display: inline-block; padding: 4px 10px; border-radius: 999px; font-size: .8rem; }
+    .ok { background: rgba(34,197,94,.2); color: #86efac; border: 1px solid rgba(34,197,94,.4); }
+    .warn { background: rgba(245,158,11,.2); color: #fcd34d; border: 1px solid rgba(245,158,11,.4); }
+    .danger { background: rgba(239,68,68,.2); color: #fca5a5; border: 1px solid rgba(239,68,68,.4); }
+    .btns { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+    button {
+      border: 1px solid var(--line); border-radius: 8px; background: #22325f;
+      color: var(--text); padding: 9px 12px; cursor: pointer;
+    }
+    button.primary { background: #2854b5; border-color: #3a67c8; }
+    pre {
+      margin: 0; background: #0c132a; border: 1px solid var(--line);
+      border-radius: 8px; padding: 12px; overflow: auto; color: #c8d5ff;
+    }
+    .flow { list-style: none; margin: 0; padding: 0; }
+    .flow li { border-left: 2px solid var(--line); margin-left: 10px; padding: 0 0 12px 14px; position: relative; }
+    .flow li::before {
+      content: ''; width: 10px; height: 10px; border-radius: 50%;
+      background: var(--primary); position: absolute; left: -6px; top: 4px;
+    }
+    .small { font-size: .85rem; color: var(--muted); }
+  </style>
+</head>
+<body>
+  <main class="wrap">
+    <h1>Painel de Integração: DHR → CRM → WhatsApp</h1>
+    <p class="sub">Interface para visualizar e testar a regra: <strong>status 3 = pago</strong> e envio ao CRM <strong>após 5 minutos</strong>.</p>
+
+    <section class="grid g2">
+      <article class="card">
+        <h2>Configuração do CRM Webhook</h2>
+        <label>CRM_WEBHOOK_URL</label>
+        <input id="crmUrl" value="https://api.datacrazy.io/v1/crm/api/crm/flows/webhooks/a3161e6d-6f4d-4b16-a1b5-16bcb9641994/dbcb4103-0a6a-4553-b3e0-977057906de4" />
+
+        <div class="row">
+          <div>
+            <label>CRM_WEBHOOK_TIMEOUT_MS</label>
+            <input id="timeout" type="number" value="10000" />
+          </div>
+          <div>
+            <label>CRM_WEBHOOK_ENABLED</label>
+            <select id="enabled">
+              <option value="true" selected>true</option>
+              <option value="false">false</option>
+            </select>
+          </div>
+        </div>
+        <p class="small">Dica: troque a URL aqui para alternar entre produção e homologação.</p>
+      </article>
+
+      <article class="card">
+        <h2>Simulador de Evento DHR</h2>
+        <div class="row">
+          <div>
+            <label>transaction_id</label>
+            <input id="tx" value="txn_123" />
+          </div>
+          <div>
+            <label>order_id</label>
+            <input id="order" value="pedido_456" />
+          </div>
+        </div>
+        <div class="row">
+          <div>
+            <label>status</label>
+            <select id="status">
+              <option value="3" selected>3 (paid)</option>
+              <option value="1">1 (pending)</option>
+              <option value="4">4 (refunded)</option>
+            </select>
+          </div>
+          <div>
+            <label>amount (centavos)</label>
+            <input id="amount" type="number" value="19990" />
+          </div>
+        </div>
+      </article>
+    </section>
+
+    <section class="grid g2" style="margin-top:14px;">
+      <article class="card">
+        <h2>Validação da Regra de 5 Minutos</h2>
+        <p id="ruleResult"><span class="pill warn">Aguardando simulação</span></p>
+        <ul class="flow">
+          <li>Recebe postback da DHR.</li>
+          <li>Se status != 3: não envia aquisição (somente log).</li>
+          <li>Se status == 3: agenda para <code>paid_at + 5min</code>.</li>
+          <li>Revalida status antes do disparo no CRM.</li>
+          <li>Envia aquisição e dispara WhatsApp.</li>
+        </ul>
+      </article>
+
+      <article class="card">
+        <h2>Payload para o CRM (pré-visualização)</h2>
+        <pre id="payloadView">{}</pre>
+      </article>
+    </section>
+
+    <section class="card" style="margin-top:14px;">
+      <h2>Checklist Rápido</h2>
+      <p><span class="pill ok">✔ Idempotency-Key</span> <span class="pill ok">✔ status = 3</span> <span class="pill ok">✔ +5 min</span> <span class="pill ok">✔ customer.name/email/phone</span></p>
+      <div class="btns">
+        <button class="primary" onclick="simulate()">Simular processamento</button>
+        <button onclick="copyPayload()">Copiar payload JSON</button>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    function statusLabel(code) {
+      if (Number(code) === 3) return 'paid';
+      if (Number(code) === 1) return 'pending';
+      return 'reversed';
+    }
+
+    function buildPayload() {
+      const tx = document.getElementById('tx').value;
+      const order = document.getElementById('order').value;
+      const status = Number(document.getElementById('status').value);
+      const amount = Number(document.getElementById('amount').value);
+      const paidAt = new Date().toISOString();
+      return {
+        event: 'paid_acquisition',
+        provider: 'dhr',
+        transaction_id: tx,
+        order_id: order,
+        status,
+        status_label: statusLabel(status),
+        amount,
+        currency: 'BRL',
+        paid_at: paidAt,
+        confirmed_after_minutes: 5,
+        customer: {
+          name: 'Lead Exemplo',
+          email: 'lead@email.com',
+          phone: '5511999999999'
+        },
+        metadata: {
+          source: 'gateway_dhr',
+          idempotency_key: `dhr_${tx}_status${status}_${statusLabel(status)}`
+        }
+      };
+    }
+
+    function simulate() {
+      const status = Number(document.getElementById('status').value);
+      const enabled = document.getElementById('enabled').value;
+      const result = document.getElementById('ruleResult');
+
+      if (enabled === 'false') {
+        result.innerHTML = '<span class="pill danger">Envio desabilitado (CRM_WEBHOOK_ENABLED=false)</span>';
+      } else if (status !== 3) {
+        result.innerHTML = '<span class="pill warn">Status diferente de 3: não enviar aquisição.</span>';
+      } else {
+        result.innerHTML = '<span class="pill ok">Status 3 detectado. Agendar envio para 5 minutos após confirmação.</span>';
+      }
+
+      document.getElementById('payloadView').textContent = JSON.stringify(buildPayload(), null, 2);
+    }
+
+    async function copyPayload() {
+      const payload = JSON.stringify(buildPayload(), null, 2);
+      await navigator.clipboard.writeText(payload);
+      alert('Payload copiado!');
+    }
+
+    simulate();
+  </script>
+</body>
+</html>
