@@ -161,6 +161,20 @@ isso **não é erro do Node**. Significa que o Railway está lendo uma pasta vaz
 4. Salve e clique em **Redeploy**.
 5. Se ainda aparecer `.gitkeep`, desconecte e reconecte o repositório no serviço.
 
+#### Quando isso continua acontecendo (mesmo após redeploy)
+
+Se o log continua mostrando apenas `.gitkeep`, normalmente o serviço foi criado a partir de uma origem vazia e não está puxando seu GitHub de fato. Faça este reset rápido:
+
+1. No Railway, crie **um novo serviço** com **Deploy from GitHub repo** (não use serviço vazio/manual).
+2. Selecione o mesmo repositório e a branch correta.
+3. Em **Root Directory**, use `.`.
+4. Em **Deploy > Settings**, garanta:
+   - **Build Command**: `npm install`
+   - **Start Command**: `npm start`
+5. Faça deploy desse novo serviço.
+
+> Se funcionar no serviço novo, o serviço antigo estava com source quebrado/cacheado.
+
 #### Validação no GitHub (antes do deploy)
 
 Na branch usada no Railway, precisa existir pelo menos:
@@ -170,6 +184,15 @@ Na branch usada no Railway, precisa existir pelo menos:
 - `src/server.js`
 
 Se qualquer um desses não estiver no GitHub, faça push novamente.
+
+Comandos para validar localmente antes de abrir o Railway:
+
+```bash
+git branch --show-current
+git remote -v
+git ls-files | rg '^(package.json|start.sh|src/server.js)$'
+git push origin $(git branch --show-current)
+```
 
 ### 7) Problemas comuns no Railway
 
